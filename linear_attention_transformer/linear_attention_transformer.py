@@ -534,10 +534,13 @@ class VitEmbedding(nn.Module):
     def forward(self,x):
         x = self.to_patch_embedding(x)
         b, n, _ = x.shape
+        print("forward  ViTEmedding")
 
         cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
         x = torch.cat((cls_tokens, x), dim=1)
         x += self.pos_embedding[:, :(n + 1)]
+        print("forward  pre return")
+
         return x
 
 
@@ -569,12 +572,16 @@ class ViT(nn.Module):
         if self.revisor and "sleeping" in kwargs and kwargs["sleeping"] == True:
             logits, vectors = self.revisor(x)
             return vectors
-
+        print("pre self.embedding")
         x = self.embedding(x)
+        print("post self.embedding")
 
         x = self.transformer(x)
+        print("post self.transformer")
 
         x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
 
         x = self.to_latent(x)
+        print("pre return")
+
         return self.mlp_head(x)
