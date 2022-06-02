@@ -564,7 +564,11 @@ class ViT(nn.Module):
             nn.Linear(dim, num_classes)
         )
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
+        if self.revisor and "sleeping" in kwargs and kwargs["sleeping"] == True:
+            logits, vectors = self.revisor(x)
+            return vectors
+
         x = self.embedding(x)
 
         x = self.transformer(x)
