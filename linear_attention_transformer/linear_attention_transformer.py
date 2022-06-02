@@ -435,7 +435,6 @@ class LinearAttentionTransformer(nn.Module):
             1 if all([(h == 0) for h in n_local_attn_heads]) else local_attn_window_size
         )
 
-
     def forward(self, x, **kwargs):
         return self.layers(x, **kwargs)
 
