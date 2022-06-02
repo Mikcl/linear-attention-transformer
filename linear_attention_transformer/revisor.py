@@ -14,18 +14,22 @@ class Revisor(nn.Module):
     """
     def __init__(
         self,
-        embedding,
+        token_embedding: nn.Embedding,
+        pos_embedding: nn.Module,
+        layer_pos_embedding: nn.Module,
         # TODO - Pass Config Params
     ):
         super().__init__()
 
-        self.num_embeddings = embedding.num_embeddings
-        self.embedding_dim  = embedding.embedding_dim
+        self.num_embeddings = token_embedding.num_embeddings
+        self.embedding_dim  = token_embedding.embedding_dim
 
         assert self.embedding_dim
         assert self.num_embeddings
 
-        self.embedding = embedding
+        self.token_embedding = token_embedding
+        self.pos_embedding = pos_embedding
+        self.layer_pos_embedding = layer_pos_embedding
 
         self.hidden_dim = 4
         self.layers     = 1
@@ -48,9 +52,13 @@ class Revisor(nn.Module):
         self,
         x
     ):
-        emb = self.embedding(x)
+        x = self.token_embedding(x)
+        x = x + self.pos_emb(x).type(x.type())
 
-        _, (h, c) = self.model(emb)  # (n_layers, n_samples, hidden_dim)
+        # TODO - use when using a transformer
+        layer_pos_emb = self.layer_pos_emb(x)
+
+        _, (h, c) = self.model(x)  # (n_layers, n_samples, hidden_dim)
 
         h_mean = h.mean(dim=0)  # (n_samples, hidden_dim)
         x = self.linear_1(h_mean)  # (n_samples, dense_dim)

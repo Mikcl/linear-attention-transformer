@@ -6,6 +6,7 @@ from operator import mul
 from math import gcd
 from collections import namedtuple
 from functools import partial, reduce
+from linear_attention_transformer.revisor import Revisor
 
 from local_attention import LocalAttention
 from linformer import LinformerSelfAttention
@@ -434,9 +435,6 @@ class LinearAttentionTransformer(nn.Module):
             1 if all([(h == 0) for h in n_local_attn_heads]) else local_attn_window_size
         )
 
-    def forward(self, x, **kwargs):
-        return self.layers(x, **kwargs)
-
 class LinearAttentionTransformerLM(nn.Module):
     def __init__(
         self,
@@ -466,7 +464,8 @@ class LinearAttentionTransformerLM(nn.Module):
         context_linformer_settings = None,
         use_axial_pos_emb = True,
         use_rotary_emb = False,
-        shift_tokens = False
+        shift_tokens = False,
+        revisor = False,
     ):
         assert n_local_attn_heads == 0 or (max_seq_len % local_attn_window_size) == 0, 'max sequence length must be divisible by the local attention window size'
         super().__init__()
@@ -485,6 +484,11 @@ class LinearAttentionTransformerLM(nn.Module):
             self.pos_emb = AbsolutePositionalEmbedding(emb_dim, max_seq_len)
             self.layer_pos_emb = always(None)
 
+        if revisor:
+            self.revisor = Revisor(self.token_emb, self.pos_emb, self.layer_pos_emb)
+        else:
+            self.revisor = always(None)
+
         self.transformer = LinearAttentionTransformer(dim, depth, max_seq_len, heads = heads, dim_head = dim_head, causal = causal, ff_chunks = ff_chunks, ff_glu = ff_glu, ff_dropout = ff_dropout, attn_layer_dropout = attn_layer_dropout, attn_dropout = attn_dropout, reversible = reversible, blindspot_size = blindspot_size, n_local_attn_heads = n_local_attn_heads, local_attn_window_size = local_attn_window_size, receives_context = receives_context, pkm_layers = pkm_layers, pkm_num_keys = pkm_num_keys, attend_axially = attend_axially, linformer_settings = linformer_settings, context_linformer_settings = context_linformer_settings, shift_tokens = shift_tokens)
 
         if emb_dim != dim:
@@ -494,6 +498,10 @@ class LinearAttentionTransformerLM(nn.Module):
         self.out = nn.Linear(emb_dim, num_tokens) if not return_embeddings else nn.Identity()
 
     def forward(self, x, **kwargs):
+        if "sleeping" in kwargs and kwargs["sleeping"] == True and self.revisor:
+            logits, vectors = self.revisor(x)
+            return vectors
+
         x = self.token_emb(x)
         x = x + self.pos_emb(x).type(x.type())
 
