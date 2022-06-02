@@ -487,7 +487,7 @@ class LinearAttentionTransformerLM(nn.Module):
         if revisor:
             self.revisor = Revisor(self.token_emb, self.pos_emb, self.layer_pos_emb)
         else:
-            self.revisor = always(None)
+            self.revisor = False
 
         self.transformer = LinearAttentionTransformer(dim, depth, max_seq_len, heads = heads, dim_head = dim_head, causal = causal, ff_chunks = ff_chunks, ff_glu = ff_glu, ff_dropout = ff_dropout, attn_layer_dropout = attn_layer_dropout, attn_dropout = attn_dropout, reversible = reversible, blindspot_size = blindspot_size, n_local_attn_heads = n_local_attn_heads, local_attn_window_size = local_attn_window_size, receives_context = receives_context, pkm_layers = pkm_layers, pkm_num_keys = pkm_num_keys, attend_axially = attend_axially, linformer_settings = linformer_settings, context_linformer_settings = context_linformer_settings, shift_tokens = shift_tokens)
 
@@ -498,7 +498,7 @@ class LinearAttentionTransformerLM(nn.Module):
         self.out = nn.Linear(emb_dim, num_tokens) if not return_embeddings else nn.Identity()
 
     def forward(self, x, **kwargs):
-        if "sleeping" in kwargs and kwargs["sleeping"] == True and self.revisor:
+        if self.revisor and "sleeping" in kwargs and kwargs["sleeping"] == True:
             logits, vectors = self.revisor(x)
             return vectors
 
