@@ -519,6 +519,7 @@ def pair(t):
 
 class VitEmbedding(nn.Module):
     def __init__(self, image_size_h: int, image_size_w: int, patch_size: int, channels: int, dim: int):
+        super().__init__()
         num_patches = (image_size_h // patch_size) * (image_size_w // patch_size)
         patch_dim = channels * patch_size ** 2
 
