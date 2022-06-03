@@ -546,7 +546,8 @@ class VitEmbedding(nn.Module):
 # github:lucidrains/vit-pytorch/vit_pytorch efficient.py simple_vit.py
 
 def posemb_sincos_2d(patches, temperature = 10000, dtype = torch.float32):
-    *_, h, w, dim, device, dtype = *patches.shape, patches.device, patches.dtype
+    print("Patches.shape Begin - ", patches.shape)
+    _, h, w, dim, device, dtype = *patches.shape, patches.device, patches.dtype
 
     y, x = torch.meshgrid(torch.arange(h, device = device), torch.arange(w, device = device), indexing = 'ij')
     assert (dim % 4) == 0, 'feature dimension must be multiple of 4 for sincos emb'
@@ -556,6 +557,8 @@ def posemb_sincos_2d(patches, temperature = 10000, dtype = torch.float32):
     y = y.flatten()[:, None] * omega[None, :]
     x = x.flatten()[:, None] * omega[None, :] 
     pe = torch.cat((x.sin(), x.cos(), y.sin(), y.cos()), dim = 1)
+    print("Patches.shape End - ", pe.shape)
+
     return pe.type(dtype)
 
 class ViT(nn.Module):
