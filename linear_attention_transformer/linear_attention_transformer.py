@@ -272,7 +272,7 @@ class SelfAttention(nn.Module):
         self.global_attn_fn = linear_attn if not causal else partial(causal_linear_attn, bucket_size = blindspot_size)
 
         self.local_attn_heads = n_local_attn_heads
-        self.local_attn  = LocalAttention(local_attn_window_size, causal = causal, dropout = attn_dropout, look_forward=0)
+        self.local_attn  = LocalAttention(local_attn_window_size, causal = causal, dropout = attn_dropout)
 
         self.to_q = nn.Linear(dim, d_heads * heads, bias = False)
 
@@ -546,7 +546,7 @@ class VitEmbedding(nn.Module):
 # github:lucidrains/vit-pytorch/vit_pytorch efficient.py simple_vit.py
 
 def posemb_sincos_2d(patches, temperature = 10000, dtype = torch.float32):
-    _, h, w, dim, device, dtype = *patches.shape, patches.device, patches.dtype
+    *_, h, w, dim, device, dtype = *patches.shape, patches.device, patches.dtype
 
     y, x = torch.meshgrid(torch.arange(h, device = device), torch.arange(w, device = device), indexing = 'ij')
     assert (dim % 4) == 0, 'feature dimension must be multiple of 4 for sincos emb'
