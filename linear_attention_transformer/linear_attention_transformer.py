@@ -546,7 +546,7 @@ class VitEmbedding(nn.Module):
 # github:lucidrains/vit-pytorch/vit_pytorch efficient.py simple_vit.py
 
 def posemb_sincos_2d(patches, temperature = 10000, dtype = torch.float32):
-    print("Patches.shape Begin - ", patches.shape)
+    print("Patches.shape Begin - ", patches.shape, "device:", patches.device, "type:", patches.dtype)
     _, h, w, dim, device, dtype = *patches.shape, patches.device, patches.dtype
 
     y, x = torch.meshgrid(torch.arange(h, device = device), torch.arange(w, device = device), indexing = 'ij')
