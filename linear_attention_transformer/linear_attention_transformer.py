@@ -272,7 +272,7 @@ class SelfAttention(nn.Module):
         self.global_attn_fn = linear_attn if not causal else partial(causal_linear_attn, bucket_size = blindspot_size)
 
         self.local_attn_heads = n_local_attn_heads
-        self.local_attn  = LocalAttention(local_attn_window_size, causal = causal, dropout = attn_dropout)
+        self.local_attn  = LocalAttention(local_attn_window_size, causal = causal, dropout = attn_dropout, look_forward=0)
 
         self.to_q = nn.Linear(dim, d_heads * heads, bias = False)
 
