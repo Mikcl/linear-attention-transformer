@@ -531,29 +531,38 @@ class VitEmbedding(nn.Module):
             nn.Linear(patch_dim, dim),
         )
 
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
-        self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
 
     def forward(self,x):
-        x = self.to_patch_embedding(x)
-        b, n, _ = x.shape
-        print("forward  ViTEmedding")
+        *_, h, w, dtype = *x.shape, x.dtype
 
-        cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
-        x = torch.cat((cls_tokens, x), dim=1)
-        x += self.pos_embedding[:, :(n + 1)]
-        print("forward  pre return")
+        x = self.to_patch_embedding(x)
+        pe = posemb_sincos_2d(x)
+        x = rearrange(x, 'b ... d -> b (...) d') + pe
 
         return x
 
 
-# github:lucidrains/vit-pytorch/vit_pytorch efficient.py 
+
+# github:lucidrains/vit-pytorch/vit_pytorch efficient.py simple_vit.py
+
+def posemb_sincos_2d(patches, temperature = 10000, dtype = torch.float32):
+    _, h, w, dim, device, dtype = *patches.shape, patches.device, patches.dtype
+
+    y, x = torch.meshgrid(torch.arange(h, device = device), torch.arange(w, device = device), indexing = 'ij')
+    assert (dim % 4) == 0, 'feature dimension must be multiple of 4 for sincos emb'
+    omega = torch.arange(dim // 4, device = device) / (dim // 4 - 1)
+    omega = 1. / (temperature ** omega)
+
+    y = y.flatten()[:, None] * omega[None, :]
+    x = x.flatten()[:, None] * omega[None, :] 
+    pe = torch.cat((x.sin(), x.cos(), y.sin(), y.cos()), dim = 1)
+    return pe.type(dtype)
+
 class ViT(nn.Module):
-    def __init__(self, *, image_size, patch_size, num_classes, dim, transformer, pool = 'cls', channels = 3, revisor=False):
+    def __init__(self, *, image_size, patch_size, num_classes, dim, transformer, channels = 3, revisor=False):
         super().__init__()
         image_size_h, image_size_w = pair(image_size)
         assert image_size_h % patch_size == 0 and image_size_w % patch_size == 0, 'image dimensions must be divisible by the patch size'
-        assert pool in {'cls', 'mean'}, 'pool type must be either cls (cls token) or mean (mean pooling)'
 
         self.embedding = VitEmbedding(image_size_h, image_size_w, patch_size, channels, dim)
         self.transformer = transformer
@@ -563,7 +572,6 @@ class ViT(nn.Module):
         else:
             self.revisor = False
 
-        self.pool = pool
         self.to_latent = nn.Identity()
 
         self.mlp_head = nn.Sequential(
@@ -575,16 +583,12 @@ class ViT(nn.Module):
         if self.revisor and "sleeping" in kwargs and kwargs["sleeping"] == True:
             logits, vectors = self.revisor(x)
             return vectors
-        print("pre self.embedding")
         x = self.embedding(x)
-        print("post self.embedding")
 
         x = self.transformer(x)
-        print("post self.transformer")
 
-        x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
+        x = x.mean(dim = 1)
 
         x = self.to_latent(x)
-        print("pre return")
 
         return self.mlp_head(x)
