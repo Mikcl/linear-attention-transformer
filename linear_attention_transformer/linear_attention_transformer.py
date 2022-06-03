@@ -560,7 +560,7 @@ def posemb_sincos_2d(patches, temperature = 10000, dtype = torch.float32):
     return pe.type(dtype)
 
 class ViT(nn.Module):
-    def __init__(self, *, image_size, patch_size, num_classes, dim, transformer, channels = 3, revisor=False):
+    def __init__(self, *, image_size, patch_size, num_classes, dim, transformer, channels = 3, revisor_model=None):
         super().__init__()
         image_size_h, image_size_w = pair(image_size)
         assert image_size_h % patch_size == 0 and image_size_w % patch_size == 0, 'image dimensions must be divisible by the patch size'
@@ -568,10 +568,10 @@ class ViT(nn.Module):
         self.embedding = VitEmbedding(image_size_h, image_size_w, patch_size, channels, dim)
         self.transformer = transformer
 
-        if revisor:
-            self.revisor = RevisorGeneric(self.embedding, num_classes, dim)
+        if revisor_model:
+            self.revisor = Revisor3(self.embedding, num_classes, dim, revisor_model, num_classes)
         else:
-            self.revisor = False
+            self.revisor = None
 
         self.to_latent = nn.Identity()
 
@@ -593,3 +593,65 @@ class ViT(nn.Module):
         x = self.to_latent(x)
 
         return self.mlp_head(x), None
+
+
+class Revisor3(nn.Module):
+    """Reviser network is a generic concept but will make an implementation of one here.
+
+    The concept is to reuse the embeddings of the Network it is used within and 
+    have its own disconnected process for 'revising' these embeddings by learning to
+    predict the next embedding.
+
+
+    Parameters
+    ----------
+    embedding : Embedding - shared from the network.
+    """
+    def __init__(
+        self,
+        embedding_module: nn.Module,
+        num_embeddings: int,
+        embedding_dim: int,
+        model: nn.Module,
+        model_output_dim: int,
+    ):
+        super().__init__()
+
+        self.num_embeddings = num_embeddings
+        self.embedding_dim  = embedding_dim
+
+        self.model_output_dim = model_output_dim
+
+        assert self.embedding_dim
+        assert self.num_embeddings
+        assert self.model_output_dim
+
+        self.embedding_module = embedding_module
+
+        self.model = model
+
+        self.to_latent = nn.Identity()
+
+        # Output Heads
+        self.linear_token = nn.Linear(self.model_output_dim, self.num_embeddings)
+
+        self.linear_vector = nn.Linear(self.model_output_dim, self.embedding_dim)
+
+
+    def forward(
+        self,
+        x
+    ):
+        x = self.embedding_module(x)
+
+        x = self.model(x)
+
+        x = x.mean(dim = 1)
+
+        x = self.to_latent(x)
+
+        logits = self.linear_token(x)  # (n_samples, vocab_size)
+
+        vectors = self.linear_vector(x) # (n_samples, embedding_dim)  - learning to predict a new "non-existent" 'token'
+
+        return logits, vectors
