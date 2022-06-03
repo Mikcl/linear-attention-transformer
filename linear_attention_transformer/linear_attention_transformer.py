@@ -585,7 +585,7 @@ class ViT(nn.Module):
     def forward(self, x, **kwargs):
         if self.revisor and "sleeping" in kwargs and kwargs["sleeping"] == True:
             logits, vectors = self.revisor(x)
-            return vectors
+            return logits, vectors
         x = self.embedding(x)
 
         x = self.transformer(x)
@@ -594,4 +594,4 @@ class ViT(nn.Module):
 
         x = self.to_latent(x)
 
-        return self.mlp_head(x)
+        return self.mlp_head(x), None
