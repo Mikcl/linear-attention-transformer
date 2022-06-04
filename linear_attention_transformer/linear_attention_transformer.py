@@ -631,6 +631,8 @@ class Revisor3(nn.Module):
         self.model = model
 
         self.to_latent = nn.Identity()
+    
+        self.norm = nn.LayerNorm(self.model_output_dim)
 
         # Output Heads
         self.linear_token = nn.Linear(self.model_output_dim, self.num_embeddings)
@@ -649,6 +651,8 @@ class Revisor3(nn.Module):
         x = x.mean(dim = 1)
 
         x = self.to_latent(x)
+
+        x = self.norm(x)
 
         logits = self.linear_token(x)  # (n_samples, vocab_size)
 
