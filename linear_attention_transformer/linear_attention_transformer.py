@@ -569,7 +569,7 @@ class ViT(nn.Module):
         self.transformer = transformer
 
         if revisor_model:
-            self.revisor = Revisor3(self.embedding, num_classes, dim, revisor_model, num_classes)
+            self.revisor = Revisor3(self.embedding, num_classes, dim, revisor_model, dim)
         else:
             self.revisor = None
 
