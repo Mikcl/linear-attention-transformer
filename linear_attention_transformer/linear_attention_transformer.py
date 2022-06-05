@@ -654,8 +654,8 @@ class Revisor3(nn.Module):
 
         x = self.norm(x)
 
-        logits = self.linear_token(x)  # (n_samples, vocab_size)
+        # logits = self.linear_token(x)  # (n_samples, vocab_size)
 
         vectors = self.linear_vector(x) # (n_samples, embedding_dim)  - learning to predict a new "non-existent" 'token'
 
-        return logits, vectors
+        return None, vectors
