@@ -537,7 +537,9 @@ class VitEmbedding(nn.Module):
 
         x = self.to_patch_embedding(x)
         pe = posemb_sincos_2d(x)
+        print("PRE SHAPE", x.shape)
         x = rearrange(x, 'b ... d -> b (...) d') + pe
+        print("POST SHAPE", x.shape)
 
         return x
 
